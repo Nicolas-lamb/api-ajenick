@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 from dotenv import load_dotenv
+import bcrypt
 
 app = Flask(__name__)
 
@@ -83,5 +84,56 @@ def add_questions():
     conn.close()
     return jsonify({'status': 'success'})
 
-# if __name__ == '__main__':
-#   app.run(host='0.0.0.0', port=6000, debug=True)
+
+
+# Rota para registrar um novo usuário
+@app.route('/register', methods=['POST'])
+def register_user():
+      # Mostra dados recebidos no log para debug
+    data = request.get_json()
+    print("Dados recebidos:", data)
+
+    # Validação para garantir que todos os campos foram enviados
+    if 'Email' not in data or 'Senha' not in data or 'Nome' not in data:
+        print("Erro: Dados incompletos")
+        return jsonify({'error': 'Dados incompletos'}), 400
+
+    # Acessa os dados
+    email = data['Email']
+    senha = data['Senha']
+    nome = data['Nome']
+
+    # Criptografa a senha com bcrypt
+    senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
+    print("Senha criptografada:", senha_hash)
+
+    try:
+        # Conexão com o banco de dados
+        conn = get_db_connection()
+        print("Conexão com o banco estabelecida")
+        
+        cursor = conn.cursor()
+        print("Cursor criado com sucesso")
+
+        # Teste de Inserção
+        cursor.execute(
+            "INSERT INTO usuario (email, senha, nome) VALUES (%s, %s, %s)",
+            (email, senha_hash.decode('utf-8'), nome)
+        )
+        conn.commit()
+
+        # Fecha a conexão
+        cursor.close()
+        conn.close()
+
+        return jsonify({'status': 'success'})
+
+    except Exception as e:
+        print("Erro ao registrar usuário:", e)
+        return jsonify({'error': str(e)}), 500
+
+        
+
+
+#if __name__ == '__main__':
+  #app.run(host='0.0.0.0', port=6000, debug=True)
