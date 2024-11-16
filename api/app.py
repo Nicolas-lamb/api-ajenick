@@ -117,23 +117,70 @@ def register_user():
 
         # Teste de Inserção
         cursor.execute(
-            "INSERT INTO usuario (email, senha, nome) VALUES (%s, %s, %s)",
+            "INSERT INTO usuario (email, senha, nome) VALUES (%s, %s, %s) RETURNING id_usuario",
             (email, senha_hash.decode('utf-8'), nome)
         )
+        id_usuario = cursor.fetchone()[0]
         conn.commit()
 
         # Fecha a conexão
         cursor.close()
         conn.close()
 
-        return jsonify({'status': 'success'})
+        return jsonify({'id_usuario': id_usuario}), 201
 
     except Exception as e:
         print("Erro ao registrar usuário:", e)
         return jsonify({'error': str(e)}), 500
 
-        
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    print("Dados recebidos:", data)
 
+    email = data.get('Email')
+    senha = data.get('Senha')
+
+    if not email or not senha:
+        return jsonify({"error": "Email e senha são obrigatórios"}), 400
+
+    try:
+        # Estabelecendo conexão com o banco
+        conn = get_db_connection()
+        print("Conexão com o banco estabelecida")
+
+        # Criando o cursor
+        cursor = conn.cursor()
+        print("Cursor criado com sucesso")
+
+        # Executando a consulta
+        cursor.execute("SELECT id_usuario, senha FROM usuario WHERE email = %s", (email,))
+        usuario = cursor.fetchone()
+        print("Resultado da consulta:", usuario)
+
+        if usuario is None:
+            return jsonify({"error": "Usuário não encontrado"}), 404
+
+        # Recuperando o ID e a senha armazenada
+        id_usuario, senha_armazenada = usuario
+
+        # Verificando a senha usando bcrypt.checkpw
+        if bcrypt.checkpw(senha.encode('utf-8'), senha_armazenada.encode('utf-8')):
+            print(f"Login bem-sucedido para o usuário: {id_usuario}")
+            return jsonify({"id_usuario": id_usuario}), 200
+        else:
+            print("Senha incorreta")
+            return jsonify({"error": "Senha incorreta"}), 401
+
+    except Exception as e:
+        print("Erro no servidor:", str(e))
+        return jsonify({"error": "Erro interno no servidor"}), 500
+
+    finally:
+        if 'cursor' in locals():  # Fecha o cursor apenas se ele foi criado
+            cursor.close()
+        if 'conn' in locals():  # Fecha a conexão apenas se ela foi criada
+            conn.close()
 
 #if __name__ == '__main__':
-  #app.run(host='0.0.0.0', port=6000, debug=True)
+ # app.run(host='0.0.0.0', port=6000, debug=True)
