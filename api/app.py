@@ -55,11 +55,12 @@ def add_game():
     nome = data['Titulo']
     descricao = data['Descricao']
     materia = data['Materia']
+    id_usuario = data['Usuario']
     print(materia)
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO jogo (nome, descricao, id_usuario, materia) VALUES (%s, %s, 1, %s) RETURNING id_jogo", (nome, descricao, materia))
+    cursor.execute("INSERT INTO jogo (nome, descricao, id_usuario, materia) VALUES (%s, %s, %s, %s) RETURNING id_jogo", (nome, descricao, id_usuario, materia))
     id_jogo = cursor.fetchone()[0]  # Obtém o id_jogo gerado
     conn.commit()
     cursor.close()
