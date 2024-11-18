@@ -36,7 +36,7 @@ def get_items():
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     # Construir a query dinamicamente
-    query = "SELECT nome, descricao, id_jogo FROM jogo WHERE 1=1"
+    query = "SELECT nome, descricao, id_jogo, id_usuario, materia FROM jogo WHERE 1=1"
     params = []
 
     if palavra_chave:
@@ -210,5 +210,5 @@ def login():
         if 'conn' in locals():  # Fecha a conexão apenas se ela foi criada
             conn.close()
 
-#if __name__ == '__main__':
- #app.run(host='0.0.0.0', port=6000, debug=True)
+if __name__ == '__main__':
+ app.run(host='0.0.0.0', port=6000, debug=True)
