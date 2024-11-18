@@ -210,5 +210,5 @@ def login():
         if 'conn' in locals():  # Fecha a conexão apenas se ela foi criada
             conn.close()
 
-if __name__ == '__main__':
- app.run(host='0.0.0.0', port=6000, debug=True)
+#if __name__ == '__main__':
+# app.run(host='0.0.0.0', port=6000, debug=True)
