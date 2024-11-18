@@ -54,10 +54,12 @@ def add_game():
     data = request.get_json()
     nome = data['Titulo']
     descricao = data['Descricao']
+    materia = data['Materia']
+    print(materia)
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO jogo (nome, descricao, id_usuario) VALUES (%s, %s, 1) RETURNING id_jogo", (nome, descricao))
+    cursor.execute("INSERT INTO jogo (nome, descricao, id_usuario, materia) VALUES (%s, %s, 1, %s) RETURNING id_jogo", (nome, descricao, materia))
     id_jogo = cursor.fetchone()[0]  # Obtém o id_jogo gerado
     conn.commit()
     cursor.close()
@@ -183,4 +185,4 @@ def login():
             conn.close()
 
 #if __name__ == '__main__':
- #app.run(host='0.0.0.0', port=6000, debug=True)
+# app.run(host='0.0.0.0', port=6000, debug=True)
