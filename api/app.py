@@ -26,13 +26,38 @@ def get_db_connection():
 # Rota para buscar os itens
 @app.route('/get_items', methods=['GET'])
 def get_items():
+    # Obter os parâmetros opcionais
+    palavra_chave = request.args.get('nome', default=None)
+    materia = request.args.get('materia', default=None)
+    # Conectar ao banco de dados
+
+    print(palavra_chave)
+    print(materia)
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
-    cursor.execute("SELECT nome, descricao, id_jogo FROM jogo")
+    # Construir a query dinamicamente
+    query = "SELECT nome, descricao, id_jogo FROM jogo WHERE 1=1"
+    params = []
+
+    if palavra_chave:
+        query += " AND nome ILIKE %s"
+        params.append(f"%{palavra_chave}%")
+
+        query += " OR similarity(nome, %s) > 0.3"  # Você pode ajustar o valor de 0.3 conforme necessário
+        params.append(palavra_chave)
+
+    if materia and materia != "Nenhuma":
+        query += " AND materia ILIKE %s"
+        params.append(f"%{materia}%")
+
+    # Executar a query
+    cursor.execute(query, params)
     rows = cursor.fetchall()
+    # Fechar a conexão
     cursor.close()
     conn.close()
     return jsonify(rows)
+
 
 # Rota para buscar perguntas com base no id_jogo
 @app.route('/get_questions', methods=['GET'])
@@ -186,4 +211,4 @@ def login():
             conn.close()
 
 #if __name__ == '__main__':
-# app.run(host='0.0.0.0', port=6000, debug=True)
+ #app.run(host='0.0.0.0', port=6000, debug=True)
