@@ -29,10 +29,10 @@ def get_items():
     # Obter os parâmetros opcionais
     palavra_chave = request.args.get('nome', default=None)
     materia = request.args.get('materia', default=None)
+    id_usuario = request.args.get('id_usuario', default=None)
+    print(id_usuario)
     # Conectar ao banco de dados
 
-    print(palavra_chave)
-    print(materia)
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     # Construir a query dinamicamente
@@ -49,6 +49,10 @@ def get_items():
     if materia and materia != "Nenhuma":
         query += " AND materia ILIKE %s"
         params.append(f"%{materia}%")
+
+    if id_usuario:
+        query += " AND id_usuario = %s"
+        params.append(id_usuario)  
 
     # Executar a query
     cursor.execute(query, params)
@@ -73,6 +77,31 @@ def get_questions():
     cursor.close()
     conn.close()
     return jsonify(rows)
+
+@app.route('/get_user', methods=['GET'])
+def get_user():
+    # Obter o ID do usuário (assumindo que você está passando como parâmetro na URL)
+    id_usuario = request.args.get('id_usuario', type=int)
+
+    if not id_usuario:
+        return jsonify({"error": "ID do usuário não fornecido"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    try:
+        # Consultar o banco de dados
+        query = "SELECT nome, descricao FROM usuario WHERE id_usuario = %s"
+        cursor.execute(query, (id_usuario,))
+        user_data = cursor.fetchone()
+
+        if not user_data:
+            return jsonify({"error": "Usuário não encontrado"}), 404
+
+        return jsonify(user_data)
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route('/add_game', methods=['POST'])
 def add_game():
@@ -210,5 +239,5 @@ def login():
         if 'conn' in locals():  # Fecha a conexão apenas se ela foi criada
             conn.close()
 
-#if __name__ == '__main__':
-# app.run(host='0.0.0.0', port=6000, debug=True)
+if __name__ == '__main__':
+ app.run(host='0.0.0.0', port=6000, debug=True)
