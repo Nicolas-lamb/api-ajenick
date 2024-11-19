@@ -4,6 +4,8 @@ from psycopg2.extras import RealDictCursor
 import os
 from dotenv import load_dotenv
 import bcrypt
+import random
+import string
 
 app = Flask(__name__)
 
@@ -36,12 +38,13 @@ def get_items():
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     # Construir a query dinamicamente
-    query = "SELECT nome, descricao, id_jogo, id_usuario, materia FROM jogo WHERE 1=1"
+    query = "SELECT nome, descricao, id_jogo, id_usuario, materia, codigo FROM jogo WHERE 1=1"
     params = []
 
     if palavra_chave:
-        query += " AND nome ILIKE %s"
+        query += " AND nome ILIKE %s OR codigo = %s"
         params.append(f"%{palavra_chave}%")
+        params.append(palavra_chave)
 
         query += " OR similarity(nome, %s) > 0.3"  # Você pode ajustar o valor de 0.3 conforme necessário
         params.append(palavra_chave)
@@ -61,6 +64,38 @@ def get_items():
     cursor.close()
     conn.close()
     return jsonify(rows)
+
+@app.route('/get_game_details', methods=['GET'])
+def get_game_details():
+    id_jogo = request.args.get('id_jogo')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Busca os detalhes do jogo e o nome do criador
+    query = """
+        SELECT j.nome, j.materia, j.codigo, j.descricao, u.nome AS nome_criador, j.id_jogo, j.id_usuario
+        FROM jogo j
+        INNER JOIN usuario u ON j.id_usuario = u.id_usuario
+        WHERE j.id_jogo = %s
+    """
+    cursor.execute(query, (id_jogo,))
+    result = cursor.fetchone()
+    
+    conn.close()
+
+    if result:
+        return jsonify({
+            "nome": result[0],
+            "materia": result[1],
+            "codigo": result[2],
+            "descricao": result[3],
+            "nomeCriador": result[4],
+            "id_jogo": result[5],
+            "id_criador": result[6]
+        })
+    else:
+        return jsonify({"error": "Jogo não encontrado"}), 404
 
 
 # Rota para buscar perguntas com base no id_jogo
@@ -103,23 +138,44 @@ def get_user():
         cursor.close()
         conn.close()
 
+
 @app.route('/add_game', methods=['POST'])
 def add_game():
+    def generate_unique_code():
+        """Gera um código único de 8 caracteres."""
+        return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
     data = request.get_json()
     nome = data['Titulo']
     descricao = data['Descricao']
     materia = data['Materia']
     id_usuario = data['Usuario']
     print(materia)
-    
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO jogo (nome, descricao, id_usuario, materia) VALUES (%s, %s, %s, %s) RETURNING id_jogo", (nome, descricao, id_usuario, materia))
+
+    # Gera e valida o código único
+    unique_code = generate_unique_code()
+    while True:
+        cursor.execute("SELECT 1 FROM jogo WHERE codigo = %s", (unique_code,))
+        if not cursor.fetchone():
+            break  # Código é único, pode sair do loop
+        unique_code = generate_unique_code()
+
+    # Insere o jogo no banco de dados
+    cursor.execute(
+        "INSERT INTO jogo (nome, descricao, id_usuario, materia, codigo) VALUES (%s, %s, %s, %s, %s) RETURNING id_jogo",
+        (nome, descricao, id_usuario, materia, unique_code)
+    )
     id_jogo = cursor.fetchone()[0]  # Obtém o id_jogo gerado
     conn.commit()
+
     cursor.close()
     conn.close()
+
     return jsonify(id_jogo)
+
 
 @app.route('/add_questions', methods=['POST'])
 def add_questions():
